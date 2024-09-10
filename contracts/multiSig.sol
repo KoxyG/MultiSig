@@ -101,4 +101,13 @@ contract Multisig {
             IERC20(trx.tokenAddress).transfer(trx.recipient, trx.amount);
         }
     }
+
+   
+    function updateQuorum(uint8 _quorum) external {
+        require(isValidSigner[msg.sender], "not a valid signer");
+        require(_quorum > 1, "quorum is too small");
+        require(_quorum <= noOfValidSigners, "quorum greater than valid signers");
+
+        quorum = _quorum;
+    }
 }
