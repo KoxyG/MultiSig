@@ -3,10 +3,11 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract Multisig {
+contract MultiSig {
     uint8 public quorum;
     uint8 public noOfValidSigners;
     uint256 public txCount;
+    uint256 public _txId;
 
     struct Transaction {
         uint256 id;
@@ -19,6 +20,9 @@ contract Multisig {
         address tokenAddress;
         address[] transactionSigners;
     }
+
+    event Transfer(uint256 indexed txId, address indexed sender, address indexed recipient, uint256 amount, address tokenAddress);
+    event updateQuorum(uint256 indexed _quorum);
 
     mapping(address => bool) isValidSigner;
     mapping(uint => Transaction) transactions; // txId -> Transaction
@@ -48,7 +52,7 @@ contract Multisig {
         quorum = _quorum;
     }
 
-    function transfer(uint256 _amount, address _recipient, address _tokenAddress) external {
+    function transfer(uint256 _amount, address _recipient, address _tokenAddress) external  {
         require(msg.sender != address(0), "address zero found");
         require(isValidSigner[msg.sender], "invalid signer");
 
@@ -58,7 +62,8 @@ contract Multisig {
 
         require(IERC20(_tokenAddress).balanceOf(address(this)) >= _amount, "insufficient funds");
 
-        uint256 _txId = txCount + 1;
+        _txId += 1;
+
         Transaction storage trx = transactions[_txId];
         
         trx.id = _txId;
@@ -72,10 +77,13 @@ contract Multisig {
         hasSigned[msg.sender][_txId] = true;
 
         txCount += 1;
+
+        emit Transfer(_txId, msg.sender, _recipient, _amount, _tokenAddress);
+
     }
 
-    function approveTx(uint8 _txId) external {
-        Transaction storage trx = transactions[_txId];
+    function approveTx(uint8 txId) external {
+        Transaction storage trx = transactions[txId];
 
         require(trx.id != 0, "invalid tx id");
         
@@ -90,9 +98,9 @@ contract Multisig {
         // }
 
         require(isValidSigner[msg.sender], "not a valid signer");
-        require(!hasSigned[msg.sender][_txId], "can't sign twice");
+        require(!hasSigned[msg.sender][txId], "can't sign twice");
 
-        hasSigned[msg.sender][_txId] = true;
+        hasSigned[msg.sender][txId] = true;
         trx.noOfApproval += 1;
         trx.transactionSigners.push(msg.sender);
 
@@ -103,11 +111,13 @@ contract Multisig {
     }
 
    
-    function updateQuorum(uint8 _quorum) external {
+    function updatedQuorum(uint8 _quorum) external {
         require(isValidSigner[msg.sender], "not a valid signer");
         require(_quorum > 1, "quorum is too small");
         require(_quorum <= noOfValidSigners, "quorum greater than valid signers");
 
         quorum = _quorum;
+
+        emit updateQuorum(_quorum);
     }
 }
