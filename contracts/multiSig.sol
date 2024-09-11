@@ -21,8 +21,20 @@ contract MultiSig {
         address[] transactionSigners;
     }
 
+
+    // events
     event Transfer(uint256 indexed txId, address indexed sender, address indexed recipient, uint256 amount, address tokenAddress);
     event updateQuorum(uint256 indexed _quorum);
+    event Approved(uint256 txId, address signer);
+
+
+    // errors
+    error InvalidSigner();
+    error InvalidQuorum();
+    error InvalidAmount();
+    error InvalidRecipient();
+    error InvalidTokenAddress();
+
 
     mapping(address => bool) isValidSigner;
     mapping(uint => Transaction) transactions; // txId -> Transaction
@@ -30,6 +42,7 @@ contract MultiSig {
     mapping(address => mapping(uint256 => bool)) hasSigned;
 
     constructor(uint8 _quorum, address[] memory _validSigners) {
+
         require(_validSigners.length > 1, "few valid signers");
         require(_quorum > 1, "quorum is too small");
 
@@ -82,7 +95,7 @@ contract MultiSig {
 
     }
 
-    function approveTx(uint8 txId) external {
+    function approveTx(uint256 txId) external returns (uint256) {
         Transaction storage trx = transactions[txId];
 
         require(trx.id != 0, "invalid tx id");
@@ -91,11 +104,7 @@ contract MultiSig {
         require(!trx.isCompleted, "transaction already completed");
         require(trx.noOfApproval < quorum, "approvals already reached");
 
-        // for(uint256 i = 0; i < trx.transactionSigners.length; i++) {
-        //     if(trx.transactionSigners[i] == msg.sender) {
-        //         revert("can't sign twice");
-        //     }
-        // }
+       
 
         require(isValidSigner[msg.sender], "not a valid signer");
         require(!hasSigned[msg.sender][txId], "can't sign twice");
@@ -108,6 +117,10 @@ contract MultiSig {
             trx.isCompleted = true;
             IERC20(trx.tokenAddress).transfer(trx.recipient, trx.amount);
         }
+
+        emit Approved(txId, msg.sender);
+
+        return txId;
     }
 
    
