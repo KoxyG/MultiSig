@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MultiSig {
-    uint8 public quorum;
+    uint256 public quorum;
     uint8 public noOfValidSigners;
     uint256 public txCount;
     uint256 public _txId;
@@ -41,7 +41,7 @@ contract MultiSig {
     // signer -> transactionId -> bool (checking if an address has signed)
     mapping(address => mapping(uint256 => bool)) hasSigned;
 
-    constructor(uint8 _quorum, address[] memory _validSigners) {
+    constructor(uint256 _quorum, address[] memory _validSigners) {
 
         require(_validSigners.length > 1, "few valid signers");
         require(_quorum > 1, "quorum is too small");
