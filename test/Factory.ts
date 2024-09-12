@@ -160,7 +160,7 @@ import {
         await expect(await token.totalSupply()).to.equal(bal);
       });
 
-      it("Transfer tokens to multiSig contract, increment TxId and approve newTxId by another valid signer", async function () {
+      it("Transfer tokens to multiSig contract, transfer tokens out of contract, increment TxId and approve newTxId by another valid signer", async function () {
         const {newMultiSigAddress} = await deployNewMultiSig();
         const { token, signer2 } = await loadFixture(deployToken);
 
