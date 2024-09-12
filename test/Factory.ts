@@ -160,7 +160,7 @@ import {
         await expect(await token.totalSupply()).to.equal(bal);
       });
 
-      it("Transfer from owner to multiSig contract & increment TxId", async function () {
+      it("Transfer tokens to multiSig contract, increment TxId and approve newTxId by another valid signer", async function () {
         const {newMultiSigAddress} = await deployNewMultiSig();
         const { token, signer2 } = await loadFixture(deployToken);
 
@@ -182,6 +182,9 @@ import {
         await tx.wait();
   
         expect(tx).to.emit(MultiSig, "Transfer");
+
+
+
   
         try {
           const txId = await MultiSig._txId();
@@ -191,10 +194,23 @@ import {
         //   console.error("Error calling _txId():", error);
           
         }
+
+        // aproving the transaction by another valid signer
+        try {
+            const tx = await MultiSig.connect(signer2).approveTx(1);
+            await tx.wait();
+            expect(tx).to.emit(MultiSig, "Approval");
+          }
+            catch (error) {
+                console.error("Error calling approveTx():", error);
+            }
+
+        
       });
-   
-   
     });
+
+   
+
 
 
 
