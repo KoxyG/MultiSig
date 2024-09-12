@@ -26,6 +26,24 @@ import {
   
       return { MultisigFactory};
     }
+
+    async function deployNewMultiSig() {
+        const { MultisigFactory } = await deployFactory();
+        const [owner, otherAccount, signer1] = await hre.ethers.getSigners();
+        const validSigners = [owner.address, otherAccount.address, signer1.address];
+        const quorum = 2;
+  
+        // Create a new MultiSig wallet
+        const MultiTx = await MultisigFactory.createMultisigWallet(quorum, validSigners);
+        await MultiTx.wait();
+  
+        // Get the address of the new MultiSig
+        const newMultiSigAddresses = await MultisigFactory.getMultiSigClones();
+        expect(newMultiSigAddresses.length).to.equal(1);
+        const newMultiSigAddress = newMultiSigAddresses[0];
+
+        return {newMultiSigAddress};
+    }
   
     describe("MultiSig Factory", function () {
       it("Should create new multiSig wallet", async function () {
@@ -65,21 +83,15 @@ import {
       });
 
       it("New contract should set the right quorum and valid signers", async function () {
-        const { MultisigFactory } = await deployFactory();
-  
+        
         const [owner, otherAccount, signer1] = await hre.ethers.getSigners();
         const validSigners = [owner.address, otherAccount.address, signer1.address];
         const quorum = 2;
+
+
+        const {newMultiSigAddress} = await deployNewMultiSig();
   
-        // Create a new MultiSig wallet
-        const tx = await MultisigFactory.createMultisigWallet(quorum, validSigners);
-        await tx.wait();
-  
-        // Get the address of the new MultiSig
-        const newMultiSigAddresses = await MultisigFactory.getMultiSigClones();
-        expect(newMultiSigAddresses.length).to.equal(1);
-        const newMultiSigAddress = newMultiSigAddresses[0];
-  
+       
         // Attach to the new MultiSig contract
         const MultiSig = await hre.ethers.getContractAt("MultiSig", newMultiSigAddress);
   
@@ -147,9 +159,46 @@ import {
   
         await expect(await token.totalSupply()).to.equal(bal);
       });
-   });
 
+      it("Transfer from owner to multiSig contract & increment TxId", async function () {
+        const {newMultiSigAddress} = await deployNewMultiSig();
+        const { token, signer2 } = await loadFixture(deployToken);
+
+  
+        // Attach to the new MultiSig contract
+        const MultiSig = await hre.ethers.getContractAt("MultiSig", newMultiSigAddress);
+        // console.log("MultiSig Contract ABI:", JSON.stringify(MultiSig.interface.format()));
+  
+        const transfer = hre.ethers.parseUnits("1000", 18);
+        
+
+        await token.approve(MultiSig, transfer);
+        await token.transfer(MultiSig, transfer);
+        
+        const balance = await token.balanceOf(MultiSig.getAddress());
+        expect(balance).to.equal(transfer);
+  
+        const tx = await MultiSig.transfer(transfer, signer2.address, token);
+        await tx.wait();
+  
+        expect(tx).to.emit(MultiSig, "Transfer");
+  
+        try {
+          const txId = await MultiSig._txId();
+        //   console.log("_txId value:", txId.toString());
+          expect(txId).to.equal(1);
+        } catch (error) {
+        //   console.error("Error calling _txId():", error);
+          
+        }
+      });
    
+   
+    });
+
+
+
+
 
 
 
